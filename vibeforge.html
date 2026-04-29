@@ -1,0 +1,2234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeForge — Smoke & Mist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-base: #e8e4df;
+      --bg-mist: #dedad4;
+      --bg-smoke: #cdc8c0;
+      --bg-deep: #b5b0a8;
+      --bg-card: rgba(255, 255, 255, 0.45);
+      --bg-card-hover: rgba(255, 255, 255, 0.6);
+
+      --text-primary: #1a1916;
+      --text-secondary: #4a4843;
+      --text-muted: #8a8580;
+      --text-ghost: #b0aca8;
+
+      --accent: #2c2925;
+      --accent-hover: #1a1916;
+      --accent-subtle: rgba(44, 41, 37, 0.08);
+      --accent-border: rgba(44, 41, 37, 0.2);
+
+      --border-light: rgba(0, 0, 0, 0.07);
+      --border-default: rgba(0, 0, 0, 0.12);
+      --border-strong: rgba(0, 0, 0, 0.2);
+
+      --smoke-light: rgba(255, 255, 255, 0.5);
+      --smoke-mid: rgba(200, 196, 190, 0.4);
+      --smoke-dark: rgba(100, 96, 90, 0.15);
+
+      --max-width: 1160px;
+      --section-pad: 96px;
+      --nav-h: 86px;
+      --t: 0.2s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: "Inter", sans-serif;
+      line-height: 1.7;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      opacity: 0.4;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.2'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: #f5f2ee;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-mist);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 3px;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    #smoke-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    .smoke-orbs {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .smoke-orb {
+      position: absolute;
+      width: var(--size);
+      height: var(--size);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+      filter: blur(80px);
+      opacity: 0.35;
+      animation: drift var(--dur) ease-in-out infinite alternate;
+      animation-delay: var(--delay);
+    }
+
+    @keyframes drift {
+      0% { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(var(--dx), var(--dy), 0) scale(1.1); }
+    }
+
+    .progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background: var(--accent);
+      z-index: 240;
+    }
+
+    .container {
+      width: min(var(--max-width), calc(100% - 48px));
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    .section {
+      padding: var(--section-pad) 0;
+    }
+
+    .section-label {
+      font: 600 11px/1.3 "Inter", sans-serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .section-title {
+      font: 600 clamp(38px, 6vw, 52px)/1.1 "Cormorant Garamond", serif;
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--text-secondary);
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+
+    .glass {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px) saturate(120%);
+      -webkit-backdrop-filter: blur(20px) saturate(120%);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+      transition: transform var(--t), box-shadow var(--t), background var(--t), border-color var(--t);
+    }
+
+    .glass:hover {
+      background: var(--bg-card-hover);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+      transform: translateY(-3px);
+    }
+
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--nav-h);
+      z-index: 220;
+      background: rgba(232, 228, 223, 0.7);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    .nav-inner {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+      position: relative;
+    }
+
+    .logo {
+      text-decoration: none;
+      color: var(--text-primary);
+      font: 700 26px/1 "Cormorant Garamond", serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 6px;
+      border-radius: 700px;
+      transform: translateY(-2px);
+      position: absolute;
+      left: 0;
+    }
+
+    .logo-img {
+      width: 170px;
+      height: auto;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.24));
+      transform: translateY(0);
+    }
+
+    .nav-links {
+      list-style: none;
+      display: flex;
+      justify-content: center;
+      gap: 26px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font: 500 14px/1.3 "Inter", sans-serif;
+      transition: color var(--t);
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .btn {
+      border-radius: 10px;
+      border: 1px solid var(--border-default);
+      padding: 14px 28px;
+      text-decoration: none;
+      font: 500 16px/1.3 "Inter", sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.5);
+      transition: all var(--t);
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--text-primary);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #f5f2ee;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .arrow {
+      transition: transform var(--t);
+    }
+
+    .btn:hover .arrow {
+      transform: translateX(3px);
+    }
+
+    .hamburger {
+      display: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border-default);
+      background: rgba(255, 255, 255, 0.5);
+      position: relative;
+      cursor: pointer;
+    }
+
+    .hamburger span {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      height: 2px;
+      background: var(--text-primary);
+    }
+
+    .hamburger span:nth-child(1) { top: 13px; }
+    .hamburger span:nth-child(2) { top: 19px; }
+    .hamburger span:nth-child(3) { top: 25px; }
+
+    .mobile-menu {
+      position: fixed;
+      inset: var(--nav-h) 0 0 0;
+      z-index: 210;
+      background: rgba(232, 228, 223, 0.75);
+      backdrop-filter: blur(24px);
+      transform: translateY(-110%);
+      transition: transform var(--t);
+      display: grid;
+      place-items: center;
+    }
+
+    .mobile-menu.open {
+      transform: translateY(0);
+    }
+
+    .mobile-menu ul {
+      list-style: none;
+      display: grid;
+      gap: 16px;
+      text-align: center;
+    }
+
+    .mobile-menu a {
+      text-decoration: none;
+      color: var(--text-primary);
+      font: 600 24px/1.2 "Cormorant Garamond", serif;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      align-items: center;
+      padding-top: calc(var(--nav-h) + 36px);
+      text-align: center;
+    }
+
+    .hero-inner {
+      width: min(760px, 100%);
+      margin: 0 auto;
+    }
+
+    .hero-pill {
+      display: inline-flex;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 999px;
+      padding: 6px 14px;
+      color: var(--text-secondary);
+      font: 500 13px/1.3 "Inter", sans-serif;
+      margin-bottom: 20px;
+    }
+
+    .hero-title {
+      font: 700 clamp(40px, 10vw, 88px)/1.05 "Cormorant Garamond", serif;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+
+    .hero-title .reality {
+      position: relative;
+      display: inline-block;
+      padding-bottom: 14px;
+    }
+
+    .hero-title .reality::after {
+      content: "";
+      position: absolute;
+      left: -2%;
+      right: -2%;
+      bottom: 0;
+      height: 14px;
+      background: no-repeat center/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 24'%3E%3Cpath d='M3 14 C 42 3, 78 21, 119 12 C 152 5, 183 18, 237 9' stroke='%232c2925' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      opacity: 0.75;
+    }
+
+    .hero-sub {
+      max-width: 560px;
+      margin: 0 auto;
+      color: var(--text-secondary);
+      font-size: 19px;
+    }
+
+    .hero-cta {
+      margin-top: 26px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero-trust {
+      margin-top: 14px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .hero-card {
+      width: min(600px, 100%);
+      margin: 28px auto 0;
+      animation: cardFloat 5s ease-in-out infinite;
+      overflow: hidden;
+    }
+
+    @keyframes cardFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .hero-card-head {
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dots i {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(70, 66, 61, 0.45);
+    }
+
+    .hero-card-body {
+      padding: 22px;
+      text-align: left;
+    }
+
+    .mono-label {
+      font: 600 11px/1.3 "Inter", sans-serif;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .typing-text {
+      font: 14px/1.7 "JetBrains Mono", monospace;
+      color: var(--text-primary);
+      min-height: 95px;
+    }
+
+    .cursor {
+      animation: blink 0.5s steps(1, end) infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    .divider {
+      border-top: 1px solid var(--border-light);
+      margin: 12px 0;
+    }
+
+    .bar-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      width: 0;
+      height: 100%;
+      background: var(--accent);
+      animation: fill 2.5s ease forwards;
+    }
+
+    @keyframes fill {
+      to { width: 100%; }
+    }
+
+    .output-line {
+      margin-top: 8px;
+      font: 13px/1.5 "JetBrains Mono", monospace;
+      color: var(--text-secondary);
+    }
+
+    .stats-band {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(255, 255, 255, 0.5);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+      margin-top: 24px;
+      padding: 52px 0 40px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      text-align: center;
+      gap: 8px;
+    }
+
+    .stat {
+      position: relative;
+    }
+
+    .stat:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: -4px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1px;
+      height: 42px;
+      background: var(--border-light);
+    }
+
+    .stat-num {
+      font: 700 48px/1.1 "Cormorant Garamond", serif;
+    }
+
+    .stat-label {
+      font: 400 13px/1.3 "Inter", sans-serif;
+      color: var(--text-muted);
+    }
+
+    .stat-stars {
+      font: 700 38px/1.1 "Cormorant Garamond", serif;
+      letter-spacing: 4px;
+      user-select: none;
+    }
+
+    .stat-stars .filled {
+      color: #f59e0b;
+    }
+
+    .stat-stars .empty {
+      color: #cfc8bd;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sep {
+      color: var(--text-ghost);
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .step {
+      padding: 30px 24px;
+    }
+
+    .step.featured {
+      transform: scale(1.02);
+    }
+
+    .step-no {
+      font: 700 13px/1.3 "Cormorant Garamond", serif;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(44, 41, 37, 0.08);
+      display: grid;
+      place-items: center;
+      margin-bottom: 12px;
+      font-size: 24px;
+    }
+
+    .step h3 {
+      font: 600 22px/1.2 "Cormorant Garamond", serif;
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .bento {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .span-2 {
+      grid-column: span 2;
+      min-height: 270px;
+    }
+
+    .waterfall {
+      position: absolute;
+      inset: 0;
+      opacity: 0.06;
+      font: 11px/1.45 "JetBrains Mono", monospace;
+      white-space: pre;
+      color: var(--text-secondary);
+      animation: codeUp 12s linear infinite;
+      padding: 10px;
+      pointer-events: none;
+    }
+
+    @keyframes codeUp {
+      from { transform: translateY(0); }
+      to { transform: translateY(-38%); }
+    }
+
+    .card-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card h3 {
+      font: 600 24px/1.2 "Cormorant Garamond", serif;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      font-size: 16px;
+    }
+
+    .demo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .pill-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .demo-builder {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .demo-builder h3 {
+      font: 600 24px/1.2 "Cormorant Garamond", serif;
+    }
+
+    .demo-builder p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .demo-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .demo-input {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border-default);
+      background: rgba(255, 255, 255, 0.68);
+      padding: 11px 12px;
+      color: var(--text-primary);
+      font: 400 14px/1.4 "Inter", sans-serif;
+    }
+
+    .demo-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .demo-suggestions-label {
+      font: 600 11px/1.3 "Inter", sans-serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(20px) saturate(120%);
+      border: 1px solid var(--border-default);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: var(--text-secondary);
+      font: 500 14px/1.3 "Inter", sans-serif;
+      text-align: left;
+      cursor: pointer;
+      transition: all var(--t);
+    }
+
+    .pill:hover {
+      border-color: var(--accent-border);
+      color: var(--text-primary);
+    }
+
+    .pill.active {
+      background: rgba(44, 41, 37, 0.1);
+      border-color: var(--accent-border);
+    }
+
+    .editor {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .editor-head {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 13px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.24);
+    }
+
+    .editor-code {
+      padding: 20px;
+      min-height: 240px;
+      font: 13px/1.65 "JetBrains Mono", monospace;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+    }
+
+    .status {
+      border-top: 1px solid var(--border-light);
+      padding: 10px 14px;
+      font: 13px/1.4 "JetBrains Mono", monospace;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.26);
+    }
+
+    .marquee-wrap {
+      overflow: hidden;
+    }
+
+    .marquee {
+      display: flex;
+      gap: 12px;
+      width: max-content;
+      margin-bottom: 12px;
+      animation: left 35s linear infinite;
+    }
+
+    .marquee.rev {
+      animation: right 45s linear infinite;
+    }
+
+    .marquee-wrap:hover .marquee {
+      animation-play-state: paused;
+    }
+
+    @keyframes left {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    @keyframes right {
+      from { transform: translateX(-50%); }
+      to { transform: translateX(0); }
+    }
+
+    .show-card {
+      width: 240px;
+      height: 140px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.35);
+      overflow: hidden;
+    }
+
+    .show-top {
+      height: 3px;
+      background: rgba(44, 41, 37, 0.25);
+    }
+
+    .show-body {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: calc(100% - 3px);
+    }
+
+    .show-name {
+      font: 600 16px/1.2 "Cormorant Garamond", serif;
+    }
+
+    .show-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    .show-time {
+      font-size: 12px;
+      color: var(--text-ghost);
+    }
+
+    .contact-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .contact-info,
+    .contact-form {
+      padding: 28px;
+    }
+
+    .contact-info h3 {
+      font: 600 30px/1.15 "Cormorant Garamond", serif;
+      margin-bottom: 10px;
+    }
+
+    .contact-info p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .contact-list {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .contact-list a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .contact-list a:hover {
+      color: var(--text-primary);
+      text-decoration: underline;
+    }
+
+    .contact-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field label {
+      font: 600 11px/1.3 "Inter", sans-serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--border-default);
+      background: rgba(255, 255, 255, 0.68);
+      padding: 11px 12px;
+      color: var(--text-primary);
+      font: 400 14px/1.4 "Inter", sans-serif;
+    }
+
+    .field textarea {
+      min-height: 130px;
+      resize: vertical;
+    }
+
+    .form-note {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .form-success {
+      display: none;
+      border-radius: 10px;
+      border: 1px solid rgba(29, 107, 79, 0.25);
+      background: rgba(52, 211, 153, 0.12);
+      color: #1d6b4f;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    .form-success.show {
+      display: block;
+    }
+
+    .form-success.error {
+      border-color: rgba(143, 37, 37, 0.22);
+      background: rgba(248, 113, 113, 0.12);
+      color: #7d2525;
+    }
+
+    .testimonials {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .quote {
+      padding: 26px;
+    }
+
+    .stars {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .quote p {
+      font: italic 400 18px/1.6 "Cormorant Garamond", serif;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+
+    .author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(44, 41, 37, 0.1);
+      display: grid;
+      place-items: center;
+      font: 600 13px/1 "Inter", sans-serif;
+      color: var(--text-primary);
+    }
+
+    .author strong {
+      font: 600 14px/1.3 "Inter", sans-serif;
+      display: block;
+    }
+
+    .author span {
+      font: 400 13px/1.3 "Inter", sans-serif;
+      color: var(--text-muted);
+    }
+
+    .final {
+      background: rgba(44, 41, 37, 0.05);
+      border-top: 1px solid var(--border-light);
+    }
+
+    .final-inner {
+      max-width: 640px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .final h2 {
+      font: 800 clamp(44px, 8vw, 72px)/1.05 "Cormorant Garamond", serif;
+      margin-bottom: 8px;
+    }
+
+    .final p {
+      font-size: 18px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .signin {
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .signin a {
+      color: var(--text-primary);
+      text-decoration: underline;
+    }
+
+    footer {
+      background: rgba(44, 41, 37, 0.06);
+      border-top: 1px solid var(--border-light);
+      padding-top: 64px;
+      padding-bottom: 32px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    .footer-logo {
+      font: 700 20px/1 "Cormorant Garamond", serif;
+      margin-bottom: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .footer-logo-img {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.24));
+    }
+
+    .footer-tagline {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .socials {
+      display: flex;
+      gap: 8px;
+    }
+
+    .socials a {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-secondary);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+    }
+
+    .socials a:hover {
+      color: var(--text-primary);
+    }
+
+    .footer-col h4 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .footer-col ul {
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .footer-col a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .footer-col a:hover {
+      color: var(--text-primary);
+    }
+
+    .footer-bottom {
+      margin-top: 36px;
+      border-top: 1px solid var(--border-light);
+      padding-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+
+    .reveal.in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hero-item {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: rise 0.6s ease-out forwards;
+    }
+
+    @keyframes rise {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .bento {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .span-2 {
+        grid-column: span 2;
+      }
+      .contact-wrap,
+      .testimonials {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: calc(100% - 32px);
+      }
+      .nav-links,
+      .nav-actions .btn {
+        display: none;
+      }
+      .hamburger {
+        display: block;
+      }
+      .nav-actions {
+        position: absolute;
+        right: 0;
+      }
+      .hero-title {
+        font-size: 40px;
+      }
+      .hero-sub {
+        font-size: 16px;
+      }
+      .hero-trust {
+        line-height: 1.8;
+      }
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .stat:nth-child(2n)::after {
+        display: none;
+      }
+      .steps {
+        grid-template-columns: 1fr;
+      }
+      .sep {
+        display: none;
+      }
+      .bento,
+      .demo,
+      .contact-wrap,
+      .testimonials,
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+      .span-2 {
+        grid-column: span 1;
+      }
+      .marquee.row-2 {
+        display: none;
+      }
+    }
+
+    /* -- SMOKE REVEAL EFFECT ---------------------------- */
+
+    .smoke-reveal-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      border-radius: inherit;
+      overflow: hidden;
+    }
+
+    .smoke-reveal-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Section must be position relative to contain the overlay */
+    .section {
+      position: relative;
+    }
+
+    /* When smoke is done -- hide overlay completely */
+    .smoke-reveal-overlay.done {
+      display: none;
+    }
+
+    /* Content underneath stays visible -- overlay sits on top and dissolves */
+    .smoke-reveal-overlay + * {
+      position: relative;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="smoke-canvas" aria-hidden="true"></canvas>
+  <div class="smoke-orbs" id="smoke-orbs" aria-hidden="true"></div>
+  <div class="progress" id="progress"></div>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="#" class="logo" aria-label="VibeForge">
+        <img src="./logo.png" alt="VibeForge logo" class="logo-img" />
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#process">How It Works</a></li>
+        <li><a href="#showcase">Showcase</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a class="btn btn-primary" href="#contact">Get Started</a>
+        <button class="hamburger" id="hamburger" aria-label="Open menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile menu">
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#process">How It Works</a></li>
+      <li><a href="#showcase">Showcase</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li><a href="#contact">Get Started</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="hero-pill hero-item" style="animation-delay:0ms;">✦ AI-Powered Vibe Coding — Now in Beta</p>
+        <h1 class="hero-title hero-item" style="animation-delay:120ms;">Forge Your Vision<br /><span class="reality">Into Reality.</span></h1>
+        <p class="hero-sub hero-item" style="animation-delay:240ms;">Describe what you want to build. VibeForge writes the code, structures the layout, and ships it — in seconds.</p>
+        <div class="hero-cta hero-item" style="animation-delay:360ms;">
+          <a class="btn btn-primary" href="#contact">Start Building Free <span class="arrow">→</span></a>
+          <a class="btn" href="#process">See How It Works</a>
+        </div>
+        <p class="hero-trust hero-item" style="animation-delay:480ms;">✓ Free forever  ·  ✓ No credit card  ·  ✓ Clean code export</p>
+
+        <article class="glass hero-card hero-item" style="animation-delay:600ms;">
+          <div class="hero-card-head">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <span>vibeforge — prompt terminal</span>
+          </div>
+          <div class="hero-card-body">
+            <p class="mono-label">Prompt</p>
+            <p class="typing-text" id="hero-typing"></p>
+            <div class="divider"></div>
+            <div class="bar-track"><div class="bar-fill"></div></div>
+            <p class="output-line">✓ 1,247 lines generated · 0.84s</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="stats-band reveal" id="stats">
+      <div class="container stats-grid">
+        <div class="stat">
+          <p class="stat-num stat-count" data-target="4">0</p>
+          <p class="stat-label">Builders</p>
+        </div>
+        <div class="stat">
+          <p class="stat-num stat-count" data-target="98.7" data-suffix="%">0</p>
+          <p class="stat-label">Satisfaction</p>
+        </div>
+        <div class="stat">
+          <p class="stat-stars" aria-label="3 out of 5 stars">
+            <span class="filled">★</span><span class="filled">★</span><span class="filled">★</span><span class="empty">★</span><span class="empty">★</span>
+          </p>
+          <p class="stat-label">Customer Ratings</p>
+        </div>
+        <div class="stat">
+          <p class="stat-num stat-count" data-target="3">0</p>
+          <p class="stat-label">Projects</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="process">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container">
+        <p class="section-label">The Process</p>
+        <h2 class="section-title">From idea to shipped in three steps</h2>
+        <div class="steps">
+          <article class="glass step">
+            <p class="step-no">01</p>
+            <div class="icon-box">💬</div>
+            <h3>Describe Your Vision</h3>
+            <p>Type what you want in plain English. Be specific or keep it vague — VibeForge understands both.</p>
+          </article>
+          <div class="sep">—</div>
+          <article class="glass step featured">
+            <p class="step-no">02</p>
+            <div class="icon-box">⚡</div>
+            <h3>VibeForge Generates</h3>
+            <p>Watch clean, structured code appear in real time. HTML, CSS, JavaScript — production ready from the first pass.</p>
+          </article>
+          <div class="sep">—</div>
+          <article class="glass step">
+            <p class="step-no">03</p>
+            <div class="icon-box">🚀</div>
+            <h3>Export and Ship</h3>
+            <p>Download your files, push to GitHub, or deploy in one click. Your project is ready for the world.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="features">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container">
+        <p class="section-label">Features</p>
+        <h2 class="section-title">Everything you need to build faster</h2>
+        <div class="bento">
+          <article class="glass card span-2">
+            <pre class="waterfall" id="waterfall"></pre>
+            <div class="card-content">
+              <h3>Prompt-to-Code Engine</h3>
+              <p>Describe anything. Get production-ready code instantly. No setup. No dependencies. No friction.</p>
+            </div>
+          </article>
+          <article class="glass card">
+            <div class="mini-browser glass" style="border-radius:12px; padding:0; margin-bottom:12px;">
+              <div class="hero-card-head" style="border-radius:12px 12px 0 0;">
+                <div class="dots"><i></i><i></i><i></i></div><span>preview</span>
+              </div>
+              <div style="padding:10px; min-height:120px;">
+                <div style="height:12px; background:rgba(0,0,0,0.08); border-radius:999px; margin-bottom:8px;"></div>
+                <div style="height:12px; width:68%; background:rgba(0,0,0,0.07); border-radius:999px; margin-bottom:8px;"></div>
+                <div style="height:52px; background:rgba(0,0,0,0.06); border-radius:8px;"></div>
+              </div>
+            </div>
+            <h3>Live Preview</h3>
+            <p>See your build render in real time as code generates.</p>
+          </article>
+          <article class="glass card">
+            <h3>100+ Templates</h3>
+            <p>Kickstart any project with professional templates. Fully customizable with one prompt.</p>
+          </article>
+          <article class="glass card">
+            <h3>One-Click Export</h3>
+            <p>Download a clean zip, push to GitHub, or deploy to Vercel instantly.</p>
+          </article>
+          <article class="glass card">
+            <h3>AI Refinement</h3>
+            <p>Say "make it more minimal" and VibeForge updates instantly.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="demo">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container">
+        <p class="section-label">Live Demo</p>
+        <h2 class="section-title">Type a small idea, get instant Result</h2>
+        <div class="demo">
+          <article class="glass demo-builder">
+            <h3>Prompt Playground</h3>
+            <p>Write a tiny UI request and VibeForge generates starter code in seconds.</p>
+            <div class="demo-form">
+              <input
+                id="demo-input"
+                class="demo-input"
+                type="text"
+                placeholder="Example: create a pricing card with a buy button"
+                maxlength="140"
+              />
+              <button type="button" class="btn btn-primary" id="demo-generate">Generate <span class="arrow">→</span></button>
+            </div>
+            <p class="demo-suggestions-label">Try these prompts</p>
+            <div class="pill-list" id="pill-list"></div>
+          </article>
+          <article class="glass editor">
+            <div class="editor-head">output.html (HTML + CSS)</div>
+            <pre class="editor-code" id="editor-code"></pre>
+            <div class="status" id="editor-status">✓ Generated · 0.84s · No errors</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="showcase">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container">
+        <p class="section-label">Showcase</p>
+        <h2 class="section-title">Technology Stack</h2>
+        <div class="marquee-wrap">
+          <div class="marquee row-1" id="row-1"></div>
+          <div class="marquee row-2 rev" id="row-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="contact">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container">
+        <p class="section-label">Contact</p>
+        <h2 class="section-title">Let’s build your next project</h2>
+        <p class="section-sub">Tell us what you need and our team will reach out with a tailored plan.</p>
+        <div class="contact-wrap">
+          <aside class="glass contact-info">
+            <h3>Connect with VibeForge</h3>
+            <p>From landing pages to full product experiences, we can help you ship faster.</p>
+            <p>Share your scope, timeline, and budget to get started.</p>
+            <div class="contact-list">
+              <p>vibeforge59@gmail.com</p>
+              <p>Build your vision with our team</p>
+            </div>
+          </aside>
+          <form class="glass contact-form" id="contact-form" novalidate>
+            <div class="form-grid">
+              <div class="field">
+                <label for="name">Full name</label>
+                <input id="name" name="name" type="text" placeholder="Your full name" required />
+              </div>
+              <div class="field">
+                <label for="email">Work email</label>
+                <input id="email" name="email" type="email" placeholder="you@company.com" required />
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="company">Company</label>
+                <input id="company" name="company" type="text" placeholder="Company name" />
+              </div>
+              <div class="field">
+                <label for="projectType">Project type</label>
+                <select id="projectType" name="projectType" required>
+                  <option value="">Select project type</option>
+                  <option value="landing">Landing page</option>
+                  <option value="webapp">Web app</option>
+                  <option value="dashboard">Dashboard</option>
+                  <option value="ecommerce">E-commerce</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="budget">Estimated budget</label>
+              <select id="budget" name="budget">
+                <option value="">Select budget range</option>
+                <option value="under-5k">Under $5k</option>
+                <option value="5k-15k">$5k - $15k</option>
+                <option value="15k-50k">$15k - $50k</option>
+                <option value="50k-plus">$50k+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="message">Project brief</label>
+              <textarea id="message" name="message" placeholder="What do you want to build?" required></textarea>
+            </div>
+            <div class="form-success" id="form-success">Thanks! Your message has been sent successfully.</div>
+            <button type="submit" class="btn btn-primary">Send message <span class="arrow">→</span></button>
+            <p class="form-note">By submitting, you agree to be contacted by the VibeForge team.</p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="testimonials">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container">
+        <p class="section-label">Testimonials</p>
+        <h2 class="section-title">Builders love VibeForge</h2>
+        <div class="testimonials">
+          <article class="glass quote">
+            <p class="stars">★★★★★</p>
+            <p>"I described my portfolio in two sentences and had a full working site in under 3 minutes. I showed it to a client the same afternoon."</p>
+            <div class="author"><span class="avatar">SK</span><div><strong>Sarah K.</strong><span>Freelance Designer</span></div></div>
+          </article>
+          <article class="glass quote">
+            <p class="stars">★★★★★</p>
+            <p>"Not a developer. Launched my SaaS landing page in one afternoon. My co-founder thought I hired an agency."</p>
+            <div class="author"><span class="avatar">MT</span><div><strong>Marcus T.</strong><span>Startup Founder</span></div></div>
+          </article>
+          <article class="glass quote">
+            <p class="stars">★★★★★</p>
+            <p>"The AI refinement loop is addictive. I kept saying 'more minimal' until it was exactly what I imagined. Nothing else works like this."</p>
+            <div class="author"><span class="avatar">PR</span><div><strong>Priya R.</strong><span>Product Designer</span></div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section final reveal" id="final">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container final-inner">
+        <h2>Start building today.</h2>
+        <p>Join 12,400+ builders.</p>
+        <a class="btn btn-primary" href="#contact">Create Your First Build <span class="arrow">→</span></a>
+        <p class="signin">Need help before starting? Contact our team above.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <p class="footer-logo" aria-label="VibeForge">
+            <img src="./logo.png" alt="VibeForge logo" class="footer-logo-img" />
+          </p>
+          <p class="footer-tagline">Code the Vibe. Forge the Future.</p>
+          <div class="socials">
+            <a
+              href="https://github.com/forgevibe59-star/vibeforge"
+              aria-label="GitHub"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="GitHub"
+            >GH</a>
+            <a
+              href="https://www.instagram.com/vibeforge59/"
+              aria-label="Instagram"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Instagram"
+            >IG</a>
+            <a
+              href="https://www.linkedin.com/in/vibe-forge-505189407/?skipRedirect=true"
+              aria-label="LinkedIn"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="LinkedIn"
+            >in</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="#">Templates</a></li>
+            <li><a href="#">Changelog</a></li>
+            <li><a href="#">Roadmap</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <ul>
+            <li><a href="#">Docs</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Tutorials</a></li>
+            <li><a href="#">Community</a></li>
+            <li><a href="#">API</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Press</a></li>
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Terms</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2025 VibeForge, Inc.</span>
+        <span>Code the Vibe. Forge the Future.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      "use strict";
+
+      // SMOKE BACKGROUND
+      const smokeCanvas = document.getElementById("smoke-canvas");
+      const smokeCtx = smokeCanvas.getContext("2d");
+      function drawSmoke(canvas) {
+        const ctx = smokeCtx;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.width = `${w}px`;
+        canvas.style.height = `${h}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        ctx.fillStyle = "#e8e4df";
+        ctx.fillRect(0, 0, w, h);
+
+        for (let i = 0; i < 15; i += 1) {
+          const x = Math.random() * w;
+          const y = Math.random() * h;
+          const r = 200 + Math.random() * 300;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, "rgba(180,175,168,0.3)");
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (let i = 0; i < 10; i += 1) {
+          const x = Math.random() * w;
+          const y = Math.random() * h;
+          const r = 80 + Math.random() * 120;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, "rgba(140,136,130,0.2)");
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (let y = 0; y < h; y += 2) {
+          for (let x = 0; x < w; x += 2) {
+            const a = Math.random() * 0.03;
+            ctx.fillStyle = `rgba(0,0,0,${a})`;
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+      drawSmoke(smokeCanvas);
+
+      // SMOKE DRIFT ORBS
+      const orbWrap = document.getElementById("smoke-orbs");
+      for (let i = 0; i < 8; i += 1) {
+        const orb = document.createElement("div");
+        orb.className = "smoke-orb";
+        orb.style.left = `${Math.random() * 90}%`;
+        orb.style.top = `${Math.random() * 90}%`;
+        orb.style.setProperty("--size", `${400 + Math.random() * 300}px`);
+        orb.style.setProperty("--dur", `${30 + Math.random() * 30}s`);
+        orb.style.setProperty("--delay", `${-Math.random() * 20}s`);
+        orb.style.setProperty("--dx", `${(Math.random() - 0.5) * 180}px`);
+        orb.style.setProperty("--dy", `${(Math.random() - 0.5) * 160}px`);
+        orbWrap.appendChild(orb);
+      }
+
+      // SCROLL PROGRESS
+      const progress = document.getElementById("progress");
+      function updateProgress() {
+        const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+        const ratio = window.scrollY / max;
+        progress.style.width = `${ratio * 100}%`;
+      }
+      window.addEventListener("scroll", updateProgress, { passive: true });
+      updateProgress();
+
+      // SCROLL REVEAL
+      const revealEls = [...document.querySelectorAll(".reveal")];
+      const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add("in");
+        });
+      }, { threshold: 0.12 });
+      revealEls.forEach((el) => revealObserver.observe(el));
+
+      // TYPING EFFECT
+      const heroTyping = document.getElementById("hero-typing");
+      const heroPrompt = "Build me a professional SaaS landing page. Clean layout, dark hero section, features grid, and a clear contact form.";
+      let heroIndex = 0;
+      let heroTimer = 0;
+      function typeHero() {
+        heroTyping.innerHTML = `${heroPrompt.slice(0, heroIndex)}<span class="cursor">|</span>`;
+        heroIndex += 1;
+        if (heroIndex <= heroPrompt.length) {
+          heroTimer = window.setTimeout(typeHero, 28);
+        }
+      }
+      typeHero();
+
+      // DEMO INTERACTIONS
+      const prompts = [
+        "Create a pricing card with title, price, and buy button",
+        "Design a signup form with name, email, and submit button",
+        "Build a hero section with heading, subtitle, and CTA",
+        "Create a testimonial card with avatar and quote",
+        "Make a product card with image, title, and add to cart"
+      ];
+      const pillList = document.getElementById("pill-list");
+      const demoInput = document.getElementById("demo-input");
+      const demoGenerateBtn = document.getElementById("demo-generate");
+      const editorCode = document.getElementById("editor-code");
+      const editorStatus = document.getElementById("editor-status");
+      let demoInterval = 0;
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function buildSnippet(promptText) {
+        const cleanPrompt = promptText.trim();
+        const lower = cleanPrompt.toLowerCase();
+        const escapedPrompt = escapeHtml(cleanPrompt);
+        if (!cleanPrompt) return "";
+
+        function resolveAccentFromPrompt(promptLower) {
+          const colorMap = [
+            { words: ["green", "emerald", "lime"], bg: "#16a34a", hover: "#15803d", text: "#ffffff" },
+            { words: ["blue", "navy", "sky"], bg: "#2563eb", hover: "#1d4ed8", text: "#ffffff" },
+            { words: ["red", "crimson", "rose"], bg: "#dc2626", hover: "#b91c1c", text: "#ffffff" },
+            { words: ["purple", "violet"], bg: "#7c3aed", hover: "#6d28d9", text: "#ffffff" },
+            { words: ["orange", "amber"], bg: "#ea580c", hover: "#c2410c", text: "#ffffff" },
+            { words: ["yellow", "gold"], bg: "#eab308", hover: "#ca8a04", text: "#111111" },
+            { words: ["pink", "fuchsia"], bg: "#db2777", hover: "#be185d", text: "#ffffff" },
+            { words: ["teal", "cyan"], bg: "#0d9488", hover: "#0f766e", text: "#ffffff" },
+            { words: ["gray", "grey", "slate"], bg: "#475569", hover: "#334155", text: "#ffffff" },
+            { words: ["black", "dark"], bg: "#1f1d1a", hover: "#111111", text: "#ffffff" },
+            { words: ["white", "light"], bg: "#ffffff", hover: "#f3f4f6", text: "#111111" }
+          ];
+          const match = colorMap.find((entry) => entry.words.some((word) => promptLower.includes(word)));
+          return match || { bg: "#1f1d1a", hover: "#111111", text: "#ffffff" };
+        }
+
+        const accent = resolveAccentFromPrompt(lower);
+
+        function wrapOutput(html, css) {
+          return `<style>\n${css}\n</style>\n\n${html}\n\n<!-- Prompt: ${escapedPrompt} -->`;
+        }
+
+        if (lower.includes("pricing")) {
+          return wrapOutput(
+            `<article class="pricing-card">\n  <h3>Pro Plan</h3>\n  <p class="price">$29/mo</p>\n  <ul>\n    <li>Unlimited projects</li>\n    <li>Priority support</li>\n  </ul>\n  <button>Buy Now</button>\n</article>`,
+            `.pricing-card {\n  max-width: 280px;\n  padding: 20px;\n  border-radius: 14px;\n  border: 1px solid #e5e5e5;\n  background: #fff;\n}\n.pricing-card .price {\n  font-size: 24px;\n  font-weight: 700;\n  margin: 8px 0;\n}\n.pricing-card button {\n  padding: 10px 14px;\n  border: 0;\n  border-radius: 10px;\n  background: ${accent.bg};\n  color: ${accent.text};\n}\n.pricing-card button:hover {\n  background: ${accent.hover};\n}`
+          );
+        }
+        if (lower.includes("form") || lower.includes("signup") || lower.includes("login")) {
+          return wrapOutput(
+            `<form class="signup-form">\n  <label>Name</label>\n  <input type="text" placeholder="Your name" />\n  <label>Email</label>\n  <input type="email" placeholder="you@company.com" />\n  <button type="submit">Create Account</button>\n</form>`,
+            `.signup-form {\n  max-width: 340px;\n  display: grid;\n  gap: 8px;\n}\n.signup-form input {\n  padding: 10px 12px;\n  border: 1px solid #d7d7d7;\n  border-radius: 10px;\n}\n.signup-form button {\n  margin-top: 6px;\n  padding: 10px 14px;\n  border: 0;\n  border-radius: 10px;\n  background: ${accent.bg};\n  color: ${accent.text};\n}\n.signup-form button:hover {\n  background: ${accent.hover};\n}`
+          );
+        }
+        if (lower.includes("hero")) {
+          return wrapOutput(
+            `<section class="hero-block">\n  <h1>Build Faster with VibeForge</h1>\n  <p>Turn your ideas into clean UI sections instantly.</p>\n  <a href="#" class="btn-primary">Get Started</a>\n</section>`,
+            `.hero-block {\n  max-width: 520px;\n  padding: 24px;\n  border-radius: 16px;\n  background: linear-gradient(160deg, #f7f4ef, #ece7df);\n}\n.hero-block h1 {\n  margin: 0 0 8px;\n}\n.hero-block .btn-primary {\n  display: inline-block;\n  margin-top: 10px;\n  padding: 10px 14px;\n  border-radius: 10px;\n  text-decoration: none;\n  background: ${accent.bg};\n  color: ${accent.text};\n}\n.hero-block .btn-primary:hover {\n  background: ${accent.hover};\n}`
+          );
+        }
+        if (lower.includes("testimonial")) {
+          return wrapOutput(
+            `<article class="testimonial">\n  <img src="avatar.jpg" alt="Client avatar" />\n  <p>"The workflow is smooth and super fast."</p>\n  <strong>Alex Johnson</strong>\n</article>`,
+            `.testimonial {\n  max-width: 360px;\n  padding: 18px;\n  border: 1px solid #e5e5e5;\n  border-radius: 14px;\n  background: #fff;\n}\n.testimonial img {\n  width: 44px;\n  height: 44px;\n  border-radius: 50%;\n  object-fit: cover;\n}`
+          );
+        }
+        if (lower.includes("product") || lower.includes("cart")) {
+          return wrapOutput(
+            `<article class="product-card">\n  <img src="product.jpg" alt="Product image" />\n  <h3>Classic Hoodie</h3>\n  <p>$49.00</p>\n  <button>Add to Cart</button>\n</article>`,
+            `.product-card {\n  width: 240px;\n  padding: 14px;\n  border: 1px solid #e5e5e5;\n  border-radius: 14px;\n  background: #fff;\n}\n.product-card img {\n  width: 100%;\n  border-radius: 10px;\n  margin-bottom: 10px;\n}\n.product-card button {\n  width: 100%;\n  padding: 10px 12px;\n  border: 0;\n  border-radius: 10px;\n  background: ${accent.bg};\n  color: ${accent.text};\n}\n.product-card button:hover {\n  background: ${accent.hover};\n}`
+          );
+        }
+        return wrapOutput(
+          `<section class="custom-block">\n  <h2>Generated Component</h2>\n  <p>${escapedPrompt}</p>\n  <button>Primary Action</button>\n</section>`,
+          `.custom-block {\n  max-width: 420px;\n  padding: 20px;\n  border-radius: 14px;\n  border: 1px solid #e5e5e5;\n  background: #fff;\n}\n.custom-block button {\n  margin-top: 10px;\n  padding: 10px 14px;\n  border: 0;\n  border-radius: 10px;\n  background: ${accent.bg};\n  color: ${accent.text};\n}\n.custom-block button:hover {\n  background: ${accent.hover};\n}`
+        );
+      }
+
+      function renderDemo(code, promptText) {
+        window.clearInterval(demoInterval);
+        editorCode.innerHTML = "";
+        let i = 0;
+        const start = performance.now();
+        demoInterval = window.setInterval(() => {
+          i += 1;
+          editorCode.innerHTML = `${code.slice(0, i)}<span class="cursor">|</span>`;
+          const elapsed = ((performance.now() - start) / 1000).toFixed(2);
+          editorStatus.textContent = `✓ Generated · ${elapsed}s · No errors`;
+          if (i >= code.length) {
+            window.clearInterval(demoInterval);
+            editorStatus.textContent = `✓ Generated for "${promptText}" · No errors`;
+          }
+        }, 28);
+      }
+
+      function runPromptGeneration(inputValue) {
+        const promptText = String(inputValue || "").trim();
+        if (!promptText) {
+          editorStatus.textContent = "Enter a prompt to generate code.";
+          demoInput?.focus();
+          return;
+        }
+        const code = buildSnippet(promptText);
+        renderDemo(code, promptText);
+      }
+
+      prompts.forEach((label) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "pill";
+        b.textContent = label;
+        b.addEventListener("click", () => {
+          [...pillList.children].forEach((n) => n.classList.remove("active"));
+          b.classList.add("active");
+          if (demoInput) demoInput.value = label;
+          runPromptGeneration(label);
+        });
+        pillList.appendChild(b);
+      });
+      if (demoGenerateBtn) {
+        demoGenerateBtn.addEventListener("click", () => runPromptGeneration(demoInput?.value || ""));
+      }
+      if (demoInput) {
+        demoInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            runPromptGeneration(demoInput.value);
+          }
+        });
+        demoInput.value = prompts[0];
+      }
+      pillList.firstElementChild?.classList.add("active");
+      runPromptGeneration(prompts[0]);
+
+      // CONTACT FORM
+      const contactForm = document.getElementById("contact-form");
+      const formSuccess = document.getElementById("form-success");
+      function resolveContactApiUrl() {
+        if (window.VIBEFORGE_API_URL) {
+          return String(window.VIBEFORGE_API_URL).trim();
+        }
+        // If the HTML is opened directly or served by a static server on another port,
+        // default to the local Express backend.
+        if (window.location.protocol === "file:") {
+          return "http://localhost:3000/api/contact";
+        }
+        return "/api/contact";
+      }
+
+      async function parseApiResponse(response) {
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          return response.json();
+        }
+        const text = await response.text();
+        return { ok: false, message: text || "Unexpected response from server." };
+      }
+
+      if (contactForm) {
+        contactForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          formSuccess.classList.remove("show", "error");
+          if (!contactForm.checkValidity()) {
+            contactForm.reportValidity();
+            return;
+          }
+          const submitBtn = contactForm.querySelector("button[type='submit']");
+          if (submitBtn) submitBtn.disabled = true;
+
+          try {
+            const formData = new FormData(contactForm);
+            const payload = {
+              name: String(formData.get("name") || "").trim(),
+              email: String(formData.get("email") || "").trim(),
+              company: String(formData.get("company") || "").trim(),
+              projectType: String(formData.get("projectType") || "").trim(),
+              budget: String(formData.get("budget") || "").trim(),
+              message: String(formData.get("message") || "").trim()
+            };
+
+            const response = await fetch(resolveContactApiUrl(), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            const result = await parseApiResponse(response);
+
+            if (!response.ok || !result.ok) {
+              throw new Error(result.message || "Failed to send message.");
+            }
+
+            formSuccess.textContent = "Thanks! Your message has been sent successfully.";
+            formSuccess.classList.add("show");
+            contactForm.reset();
+          } catch (error) {
+            formSuccess.textContent = error?.message
+              ? `Sorry, we could not send your message: ${error.message}`
+              : "Sorry, we could not send your message right now. Please try again.";
+            formSuccess.classList.add("show", "error");
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        });
+      }
+
+      // STAT COUNTER
+      const stats = [...document.querySelectorAll(".stat-count")];
+      let statsRan = false;
+      const statsObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting || statsRan) return;
+          statsRan = true;
+          stats.forEach((el) => {
+            const target = Number(el.dataset.target || "0");
+            const suffix = el.dataset.suffix || "";
+            const prefix = el.dataset.prefix || "";
+            const float = String(target).includes(".");
+            const start = performance.now();
+            const duration = 1200;
+            function step(now) {
+              const p = Math.min((now - start) / duration, 1);
+              const eased = 1 - Math.pow(1 - p, 3);
+              const val = target * eased;
+              el.textContent = float
+                ? `${prefix}${val.toFixed(1)}${suffix}`
+                : `${prefix}${Math.round(val).toLocaleString()}${suffix}`;
+              if (p < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+          });
+        });
+      }, { threshold: 0.2 });
+      statsObserver.observe(document.getElementById("stats"));
+
+      // MARQUEE PAUSE
+      const projects = [
+        ["Spring Boot", "Backend", "Core", "Enterprise-grade Java framework for robust APIs."],
+        ["React.js", "Frontend", "Core", "Component-based library for dynamic user interfaces."],
+        ["Next.js", "Frontend", "Core", "Full-stack React framework with SSR and routing."],
+        ["PostgreSQL", "Database", "Core", "Reliable relational database for structured data."],
+        ["MySQL", "Database", "Core", "Popular SQL database for scalable applications."],
+        ["MongoDB", "Database", "Core", "Flexible NoSQL database for document data models."],
+        ["Python", "Language", "Optional", "Versatile language for automation, APIs, and AI."],
+        ["SharePoint Framework", "Platform", "Core", "Build modern extensions and web parts for SharePoint."],
+        ["TypeScript", "Language", "Core", "Typed JavaScript for safer and maintainable codebases."],
+        ["Tailwind CSS", "Styling", "Core", "Utility-first CSS framework for rapid UI styling."],
+        ["Node.js", "Backend", "Core", "JavaScript runtime for fast, event-driven backends."],
+        ["FastAPI", "Backend", "Core", "High-performance Python framework for modern APIs."],
+        ["Docker", "DevOps", "Core", "Containerization for consistent dev and production environments."],
+        ["GitHub Actions", "CI/CD", "Core", "Automate testing, builds, and deployments in workflows."],
+        ["GraphQL", "API", "Core", "Query language for efficient and flexible data fetching."],
+        ["Supabase", "Backend", "Core", "Open-source backend platform with database and auth."],
+        ["Azure", "Cloud", "Core", "Microsoft cloud services for enterprise deployments."],
+        ["AWS / Vercel", "Cloud", "Core", "Cloud hosting for backend systems and frontend apps."],
+        ["Hugging Face", "AI", "Core", "Model hub and tools for NLP and ML workflows."],
+        ["OpenAI API / Anthropic API", "AI", "Core", "Integrate powerful LLM capabilities into applications."],
+        ["HTML / CSS / JavaScript", "Frontend", "Core", "Foundation stack for building web interfaces."],
+        ["Bootstrap", "Styling", "Core", "Prebuilt responsive components for faster UI delivery."]
+      ];
+      function fillRow(id, offset) {
+        const row = document.getElementById(id);
+        const ordered = [...projects.slice(offset), ...projects.slice(0, offset)];
+        const doubled = [...ordered, ...ordered];
+        doubled.forEach((p) => {
+          const card = document.createElement("article");
+          card.className = "show-card";
+          card.innerHTML = `
+            <div class="show-top"></div>
+            <div class="show-body">
+              <div>
+                <h3 class="show-name">${p[0]}</h3>
+                <span class="show-badge">${p[1]}</span>
+              </div>
+              <p style="font-size:12px; line-height:1.45; color:var(--text-secondary); margin:6px 0 8px;">${p[3]}</p>
+              <p class="show-time">${p[2]}</p>
+            </div>
+          `;
+          row.appendChild(card);
+        });
+      }
+      fillRow("row-1", 0);
+      fillRow("row-2", 4);
+
+      // MOBILE NAV
+      const hamburger = document.getElementById("hamburger");
+      const mobileMenu = document.getElementById("mobile-menu");
+      hamburger.addEventListener("click", () => mobileMenu.classList.toggle("open"));
+      [...mobileMenu.querySelectorAll("a")].forEach((a) => {
+        a.addEventListener("click", () => mobileMenu.classList.remove("open"));
+      });
+
+      function onResize() {
+        drawSmoke(smokeCanvas);
+      }
+      window.addEventListener("resize", onResize);
+
+      // Cleanup
+      window.addEventListener("beforeunload", () => {
+        window.clearTimeout(heroTimer);
+        window.clearInterval(demoInterval);
+        revealObserver.disconnect();
+        statsObserver.disconnect();
+      });
+
+      // Populate feature waterfall
+      const waterfall = document.getElementById("waterfall");
+      waterfall.textContent = `
+<section class="hero">
+  <h1>Modern SaaS Platform</h1>
+</section>
+.card { border-radius: 16px; }
+const result = await forge(prompt);
+export default result;
+@media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+      `.repeat(6);
+    })();
+
+    /* -- SMOKE REVEAL SCROLL EFFECT -------------------- */
+
+    (function () {
+
+      /* Configuration */
+      const SMOKE_CONFIG = {
+        color: "232, 228, 223",   /* matches --bg-base rgb value */
+        particleCount: 18,         /* smoke puff count per canvas */
+        dissolveDuration: 1800,    /* ms -- total dissolve time */
+        revealThreshold: 0.18      /* how much section in view before trigger */
+      };
+
+      /* One smoke particle */
+      function SmokeParticle(canvas) {
+        const w = canvas.width;
+        const h = canvas.height;
+        this.x = Math.random() * w;
+        this.y = Math.random() * h;
+        this.radius = 60 + Math.random() * 140;
+        this.opacity = 0.5 + Math.random() * 0.5;
+        this.vx = (Math.random() - 0.5) * 0.6;
+        this.vy = -0.3 - Math.random() * 0.5;   /* drift upward */
+        this.life = 1.0;
+        this.decay = 0.004 + Math.random() * 0.006;
+      }
+
+      SmokeParticle.prototype.update = function () {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= this.decay;
+        this.opacity = Math.max(0, this.life * 0.9);
+      };
+
+      SmokeParticle.prototype.draw = function (ctx) {
+        const grad = ctx.createRadialGradient(
+          this.x, this.y, 0,
+          this.x, this.y, this.radius
+        );
+        grad.addColorStop(0, `rgba(${SMOKE_CONFIG.color}, ${this.opacity})`);
+        grad.addColorStop(0.5, `rgba(${SMOKE_CONFIG.color}, ${this.opacity * 0.5})`);
+        grad.addColorStop(1, `rgba(${SMOKE_CONFIG.color}, 0)`);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      };
+
+      /* Run smoke animation on one canvas until fully dissolved */
+      function runSmokeReveal(overlay) {
+        if (overlay.dataset.smokeRunning === "true") return;
+        overlay.dataset.smokeRunning = "true";
+
+        const canvas = overlay.querySelector(".smoke-reveal-canvas");
+        if (!canvas) return;
+
+        const parent = overlay.parentElement;
+        canvas.width = parent.offsetWidth || window.innerWidth;
+        canvas.height = parent.offsetHeight || 400;
+
+        const ctx = canvas.getContext("2d");
+        let particles = [];
+        let globalAlpha = 1.0;
+        let startTime = null;
+        const duration = SMOKE_CONFIG.dissolveDuration;
+
+        /* Seed initial smoke particles */
+        for (let i = 0; i < SMOKE_CONFIG.particleCount; i += 1) {
+          const p = new SmokeParticle(canvas);
+          /* Stagger starting life so they don't all die at once */
+          p.life = 0.6 + Math.random() * 0.4;
+          particles.push(p);
+        }
+
+        function spawnParticle() {
+          if (particles.length < SMOKE_CONFIG.particleCount + 8) {
+            particles.push(new SmokeParticle(canvas));
+          }
+        }
+
+        function frame(ts) {
+          if (!startTime) startTime = ts;
+          const elapsed = ts - startTime;
+          const progress = Math.min(elapsed / duration, 1); /* 0 -> 1 */
+
+          /* Global alpha fades the whole canvas out as progress increases */
+          globalAlpha = Math.pow(1 - progress, 1.6);
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.globalAlpha = globalAlpha;
+
+          /* Base mist fill -- starts solid, thins out */
+          ctx.fillStyle = `rgba(${SMOKE_CONFIG.color}, ${0.85 * (1 - progress)})`;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          /* Draw individual smoke puffs */
+          particles.forEach((p) => {
+            p.update();
+            p.draw(ctx);
+          });
+
+          /* Remove dead particles */
+          particles = particles.filter((p) => p.life > 0);
+
+          /* Spawn new ones in first 60% of animation */
+          if (progress < 0.6 && Math.random() < 0.3) {
+            spawnParticle();
+          }
+
+          ctx.globalAlpha = 1;
+
+          if (progress < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            /* Animation done -- remove overlay entirely */
+            overlay.classList.add("done");
+          }
+        }
+
+        requestAnimationFrame(frame);
+      }
+
+      /* Observe all smoke overlays -- trigger when section enters viewport */
+      function initSmokeReveal() {
+        const overlays = document.querySelectorAll(".smoke-reveal-overlay");
+        if (!overlays.length) return;
+
+        const observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                runSmokeReveal(entry.target);
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: SMOKE_CONFIG.revealThreshold }
+        );
+
+        overlays.forEach(function (overlay) {
+          observer.observe(overlay);
+        });
+      }
+
+      /* Handle resize -- recalculate canvas size if window resizes */
+      window.addEventListener("resize", function () {
+        document.querySelectorAll(".smoke-reveal-canvas").forEach(function (canvas) {
+          const parent = canvas.closest("section");
+          if (parent && !canvas.closest(".done")) {
+            canvas.width = parent.offsetWidth;
+            canvas.height = parent.offsetHeight;
+          }
+        });
+      });
+
+      /* Init after DOM ready */
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initSmokeReveal);
+      } else {
+        initSmokeReveal();
+      }
+
+    })();
+
+    /* -- END SMOKE REVEAL EFFECT ----------------------- */
+  </script>
+</body>
+</html>
