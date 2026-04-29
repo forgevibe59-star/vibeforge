@@ -124,7 +124,11 @@ app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "vibeforge.html"));
 });
 
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`VibeForge server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`VibeForge server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
