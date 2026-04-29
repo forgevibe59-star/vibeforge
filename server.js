@@ -20,6 +20,10 @@ function requireEnv(name) {
   return value;
 }
 
+function requireEnvTrimmed(name) {
+  return String(requireEnv(name)).trim();
+}
+
 function sanitize(value) {
   return String(value || "").trim();
 }
@@ -51,10 +55,14 @@ let mailer;
 function getMailer() {
   if (mailer) return mailer;
 
-  const host = requireEnv("SMTP_HOST");
-  const port = Number(requireEnv("SMTP_PORT"));
-  const user = requireEnv("SMTP_USER");
-  const pass = requireEnv("SMTP_PASS");
+  const host = requireEnvTrimmed("SMTP_HOST");
+  const port = Number(requireEnvTrimmed("SMTP_PORT"));
+  const user = requireEnvTrimmed("SMTP_USER");
+  const pass = requireEnvTrimmed("SMTP_PASS");
+
+  if (!Number.isFinite(port)) {
+    throw new Error("Invalid SMTP_PORT value.");
+  }
 
   mailer = nodemailer.createTransport({
     host,
@@ -68,8 +76,10 @@ function getMailer() {
 
 app.post("/api/contact", async (req, res) => {
   try {
-    const toEmail = requireEnv("CONTACT_TO_EMAIL");
-    const fromEmail = requireEnv("CONTACT_FROM_EMAIL");
+    const toEmail = requireEnvTrimmed("CONTACT_TO_EMAIL");
+    const fromRaw = requireEnvTrimmed("CONTACT_FROM_EMAIL");
+    const smtpUser = requireEnvTrimmed("SMTP_USER");
+    const fromEmail = fromRaw || smtpUser;
     const result = validatePayload(req.body);
 
     if (!result.valid) {
@@ -115,8 +125,19 @@ app.post("/api/contact", async (req, res) => {
 
     return res.json({ ok: true, message: "Message sent successfully." });
   } catch (error) {
-    // Avoid leaking secrets in responses.
-    return res.status(500).json({ ok: false, message: "Failed to send message." });
+    // Log enough detail for production debugging without exposing secrets.
+    // eslint-disable-next-line no-console
+    console.error("Contact API error:", {
+      message: error?.message || "Unknown error",
+      code: error?.code || null,
+      responseCode: error?.responseCode || null,
+      command: error?.command || null
+    });
+    return res.status(500).json({
+      ok: false,
+      message: "Failed to send message.",
+      error: error?.message || "Unknown error"
+    });
   }
 });
 
