@@ -124,6 +124,10 @@ app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "vibeforge.html"));
 });
 
+app.get("/logo.png", (_req, res) => {
+  res.sendFile(path.join(__dirname, "logo.png"));
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console
