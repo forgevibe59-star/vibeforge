@@ -1,9 +1,9 @@
 const path = require("path");
 const express = require("express");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const dotenv = require("dotenv");
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -51,35 +51,19 @@ function validatePayload(payload) {
   };
 }
 
-let mailer;
-function getMailer() {
-  if (mailer) return mailer;
-
-  const host = requireEnvTrimmed("SMTP_HOST");
-  const port = Number(requireEnvTrimmed("SMTP_PORT"));
-  const user = requireEnvTrimmed("SMTP_USER");
-  const pass = requireEnvTrimmed("SMTP_PASS");
-
-  if (!Number.isFinite(port)) {
-    throw new Error("Invalid SMTP_PORT value.");
-  }
-
-  mailer = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass }
-  });
-
-  return mailer;
+let resendClient;
+function getResendClient() {
+  if (resendClient) return resendClient;
+  const apiKey = requireEnvTrimmed("RESEND_API_KEY");
+  resendClient = new Resend(apiKey);
+  return resendClient;
 }
 
 app.post("/api/contact", async (req, res) => {
   try {
     const toEmail = requireEnvTrimmed("CONTACT_TO_EMAIL");
-    const fromRaw = requireEnvTrimmed("CONTACT_FROM_EMAIL");
-    const smtpUser = requireEnvTrimmed("SMTP_USER");
-    const fromEmail = fromRaw || smtpUser;
+    const fromRaw = sanitize(process.env.CONTACT_FROM_EMAIL);
+    const fromEmail = fromRaw || "onboarding@resend.dev";
     const result = validatePayload(req.body);
 
     if (!result.valid) {
@@ -87,7 +71,7 @@ app.post("/api/contact", async (req, res) => {
     }
 
     const { name, email, company, projectType, budget, message } = result.data;
-    const transporter = getMailer();
+    const resend = getResendClient();
 
     const subject = `New VibeForge enquiry from ${name}`;
     const text = [
@@ -114,7 +98,7 @@ app.post("/api/contact", async (req, res) => {
       <p>${message.replace(/\n/g, "<br />")}</p>
     `;
 
-    await transporter.sendMail({
+    const sendResult = await resend.emails.send({
       from: fromEmail,
       to: toEmail,
       replyTo: email,
@@ -122,6 +106,10 @@ app.post("/api/contact", async (req, res) => {
       text,
       html
     });
+
+    if (sendResult.error) {
+      throw new Error(sendResult.error.message || "Resend API request failed.");
+    }
 
     return res.json({ ok: true, message: "Message sent successfully." });
   } catch (error) {
@@ -133,10 +121,11 @@ app.post("/api/contact", async (req, res) => {
       responseCode: error?.responseCode || null,
       command: error?.command || null
     });
+    const errorMessage = error?.message || "Unknown error";
     return res.status(500).json({
       ok: false,
-      message: "Failed to send message.",
-      error: error?.message || "Unknown error"
+      message: errorMessage,
+      error: errorMessage
     });
   }
 });
