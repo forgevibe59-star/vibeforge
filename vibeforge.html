@@ -1131,6 +1131,73 @@
       transform: translateY(0);
     }
 
+    .live-projects-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .live-projects-card {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      height: 100%;
+      text-align: left;
+    }
+
+    .live-projects-card h3 {
+      font: 600 24px/1.2 "Cormorant Garamond", serif;
+      margin: 0;
+    }
+
+    .live-projects-card-desc {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .live-projects-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .live-projects-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--text-muted);
+      font: 500 11px/1.3 "Inter", sans-serif;
+      letter-spacing: 0.02em;
+    }
+
+    .live-projects-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .live-projects-actions .btn {
+      padding: 12px 20px;
+      font-size: 14px;
+    }
+
+    .live-projects-card:hover {
+      border-color: var(--accent-border);
+    }
+
+    @media (max-width: 640px) {
+      .live-projects-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .hero-item {
       opacity: 0;
       transform: translateY(16px);
@@ -1258,6 +1325,7 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#process">How It Works</a></li>
         <li><a href="#showcase">Showcase</a></li>
+        <li><a href="#live-projects">Live Projects</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
       <div class="nav-actions">
@@ -1274,6 +1342,7 @@
       <li><a href="#features">Features</a></li>
       <li><a href="#process">How It Works</a></li>
       <li><a href="#showcase">Showcase</a></li>
+      <li><a href="#live-projects">Live Projects</a></li>
       <li><a href="#contact">Contact</a></li>
       <li><a href="#contact">Get Started</a></li>
     </ul>
@@ -1450,6 +1519,45 @@
         <div class="marquee-wrap">
           <div class="marquee row-1" id="row-1"></div>
           <div class="marquee row-2 rev" id="row-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="live-projects">
+      <div class="smoke-reveal-overlay" aria-hidden="true">
+        <canvas class="smoke-reveal-canvas"></canvas>
+      </div>
+      <div class="container">
+        <p class="section-label">✦ Live Projects</p>
+        <h2 class="section-title">Shipped work you can explore today</h2>
+        <p class="section-sub">Production-ready interfaces built with modern web tooling — open the live demos or inspect the source on GitHub.</p>
+        <div class="live-projects-grid">
+          <article class="glass live-projects-card">
+            <h3>RepoVault</h3>
+            <p class="live-projects-card-desc">A developer tool to browse, manage, and organize GitHub repositories in one clean interface.</p>
+            <div class="live-projects-tags">
+              <span class="live-projects-tag">GitHub API</span>
+              <span class="live-projects-tag">JavaScript</span>
+              <span class="live-projects-tag">Vercel</span>
+              <span class="live-projects-tag">React</span>
+            </div>
+            <div class="live-projects-actions">
+              <a class="btn btn-primary" href="https://repo-vault-two.vercel.app/" target="_blank" rel="noopener noreferrer">Live demo <span class="arrow">→</span></a>
+              <a class="btn" href="https://github.com/forgevibe59-star/repo-vault" target="_blank" rel="noopener noreferrer">GitHub</a>
+            </div>
+          </article>
+          <article class="glass live-projects-card">
+            <h3>Creater Place</h3>
+            <p class="live-projects-card-desc">A clean space for creators to build and showcase their work, powered by modern web tech.</p>
+            <div class="live-projects-tags">
+              <span class="live-projects-tag">React</span>
+              <span class="live-projects-tag">Vercel</span>
+            </div>
+            <div class="live-projects-actions">
+              <a class="btn btn-primary" href="https://creater-place.vercel.app/" target="_blank" rel="noopener noreferrer">Live demo <span class="arrow">→</span></a>
+              <a class="btn" href="https://github.com/forgevibe59-star/creater-place" target="_blank" rel="noopener noreferrer">GitHub</a>
+            </div>
+          </article>
         </div>
       </div>
     </section>
